@@ -10,10 +10,10 @@ Calculates summary resource usage of the chart.
 ```
 Example output
 ```
-CPU Request 2800m
-Memory Request 13380Mi
-CPU Limit 4800m
-Memory Limit 20068Mi
+CPU Limit 3600m + 1200m (Jobs) = 4800m
+Memory Limit 14972Mi + 4996Mi (Jobs) = 19968Mi
+CPU Request 2050m + 750m (Jobs) = 2800m
+Memory Request 10580Mi + 2700Mi (Jobs) = 13280Mi
 ```
 Takes in account replica count on each resource.
 
