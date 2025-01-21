@@ -14,6 +14,8 @@ type sumCmd struct {
 	chart      string
 	values     []string
 	valueFiles []string
+
+	remote bool
 }
 
 func newSumCommand() *cobra.Command {
@@ -27,7 +29,7 @@ func newSumCommand() *cobra.Command {
 		Long:  rootCmdLongUsage,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
-				return errors.New("requires a chart path parameter")
+				return errors.New("requires an argument: chart path or release name")
 			}
 			return nil
 		},
@@ -40,12 +42,20 @@ func newSumCommand() *cobra.Command {
 	f := cmd.Flags()
 	f.StringArrayVar(&sum.values, "set", []string{}, "set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
 	f.StringArrayVarP(&sum.valueFiles, "values", "f", []string{}, "specify values in a YAML file (can specify multiple)")
+	f.BoolVar(&sum.remote, "remote", false, "Calculate for remote release instand of local chart")
 
 	return cmd
 }
 
 func (s sumCmd) run() error {
-	manifest, err := getTemplate(s.chart, s.namespace, s.values, s.valueFiles)
+	var manifest []byte
+	var err error
+	if s.remote {
+		manifest, err = getRelease(s.chart, s.namespace)
+	} else {
+		manifest, err = getTemplate(s.chart, s.namespace, s.values, s.valueFiles)
+	}
+
 	if err != nil {
 		return err
 	}

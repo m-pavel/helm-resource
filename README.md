@@ -21,4 +21,5 @@ Takes in account replica count on each resource.
   - [ ] Defaults support (as paramaeter as well as validation)
   - [ ] Volumes summary calculation
   - [ ] Reports generation
+  - [X] Remote manifest support
   

@@ -32,6 +32,15 @@ func getTemplate(template, namespace string, variables []string, values []string
 	return outputWithRichError(cmd)
 }
 
+func getRelease(release, namespace string) ([]byte, error) {
+	args := []string{"get", "manifest", release}
+	if namespace != "" {
+		args = append(args, "--namespace", namespace)
+	}
+	cmd := exec.Command(os.Getenv("HELM_BIN"), args...)
+	return outputWithRichError(cmd)
+}
+
 func outputWithRichError(cmd *exec.Cmd) ([]byte, error) {
 	output, err := cmd.Output()
 	var exitError *exec.ExitError
