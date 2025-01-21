@@ -89,7 +89,7 @@ getDownloadURL() {
   if [ "$SCRIPT_MODE" = "install" ] && [ -n "$version" ]; then
     DOWNLOAD_URL="https://github.com/$PROJECT_GH/releases/download/$version/helm-resource-$OS-$ARCH.tgz"
   else
-    DOWNLOAD_URL="https://github.com/$PROJECT_GH/releases/latest/download/helm-difresourcef-$OS-$ARCH.tgz"
+    DOWNLOAD_URL="https://github.com/$PROJECT_GH/releases/latest/download/helm-resource-$OS-$ARCH.tgz"
   fi
 }
 
