@@ -2,11 +2,6 @@ version: 2
 
 project_name: helm-resource
 
-before:
-  hooks:
-    - go mod tidy
-    - go generate ./...
-
 builds:
   - id: default
     main: .
@@ -27,6 +22,7 @@ builds:
 archives:
   - format: tgz
     name_template: '{{ .ProjectName }}-{{ if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}-{{ .Arch }}'
+    wrap_in_directory: resource
 
 changelog:
   use: github-native
