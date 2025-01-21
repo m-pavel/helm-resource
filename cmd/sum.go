@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	cv1 "k8s.io/api/core/v1"
 )
 
 type sumCmd struct {
@@ -15,7 +16,27 @@ type sumCmd struct {
 	values     []string
 	valueFiles []string
 
-	remote bool
+	remote  bool
+	require bool
+
+	defaultCpuLimit string
+	defaultMemLimit string
+	defaultCpuReq   string
+	defaultMemReq   string
+}
+
+func (s sumCmd) getDefaultLimit(k cv1.ResourceName) string {
+	if k == "cpu" {
+		return s.defaultCpuLimit
+	}
+	return s.defaultMemLimit
+}
+
+func (s sumCmd) getDefaultRequest(k cv1.ResourceName) string {
+	if k == "cpu" {
+		return s.defaultCpuReq
+	}
+	return s.defaultMemReq
 }
 
 func newSumCommand() *cobra.Command {
@@ -42,7 +63,14 @@ func newSumCommand() *cobra.Command {
 	f := cmd.Flags()
 	f.StringArrayVar(&sum.values, "set", []string{}, "set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
 	f.StringArrayVarP(&sum.valueFiles, "values", "f", []string{}, "specify values in a YAML file (can specify multiple)")
+
 	f.BoolVar(&sum.remote, "remote", false, "Calculate for remote release instand of local chart")
+	f.BoolVar(&sum.require, "require", false, "Require CPU and Memory values to be defined for each container.")
+
+	f.StringVar(&sum.defaultCpuLimit, "default-cpu-limit", "", "Default value for CPU limit")
+	f.StringVar(&sum.defaultMemLimit, "default-mem-limit", "", "Default value for Memory limit")
+	f.StringVar(&sum.defaultCpuReq, "default-cpu-req", "", "Default value for CPU request")
+	f.StringVar(&sum.defaultMemReq, "default-mem-req", "", "Default value for Memory request")
 
 	return cmd
 }
@@ -59,7 +87,7 @@ func (s sumCmd) run() error {
 	if err != nil {
 		return err
 	}
-	req, err := Parse(manifest)
+	req, err := s.Parse(manifest)
 	if err != nil {
 		return err
 	}
