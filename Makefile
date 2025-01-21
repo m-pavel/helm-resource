@@ -11,3 +11,4 @@ install: build
 		mkdir -p $(HELM_3_PLUGINS)/helm-resource/bin
 		cp resource $(HELM_3_PLUGINS)/helm-resource/bin
 		cp plugin.yaml $(HELM_3_PLUGINS)/helm-resource/
+
