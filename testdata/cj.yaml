@@ -1,0 +1,16 @@
+apiVersion: batch/v1
+kind: CronJob
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: c1
+              resources:
+                limits:
+                  cpu: 400m
+                  memory: 2Gi
+                requests:
+                  memory: 900Mi
+                  cpu: 250m

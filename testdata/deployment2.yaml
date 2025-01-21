@@ -1,0 +1,17 @@
+# Source: melmac/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: container1
+          resources:
+            limits:
+              cpu: 450m
+              memory: 1500Mi
+            requests:
+              memory: 1500Mi
+              cpu: 200m
