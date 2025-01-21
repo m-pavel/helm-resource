@@ -1,2 +1,4 @@
 resource
 out.yaml
+# Added by goreleaser init:
+dist/
