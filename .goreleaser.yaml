@@ -8,12 +8,17 @@ before:
     - go generate ./...
 
 builds:
-  - env:
+  - id: default
+    main: .
+    binary: bin/resource
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
       - windows
       - darwin
+    ldflags:
+      - -X github.com/m-pavel/helm-resource/cmd.Version={{ .Version }}
 
 archives:
   - format: tgz
