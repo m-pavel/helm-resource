@@ -13,6 +13,16 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+var ZERO = resource.MustParse("0")
+var UNO = resource.MustParse("1")
+
+const (
+	jobCpu    = "x-job-cpu"
+	jobMemory = "x-job-memory"
+)
+
+type TypeParser func(content []byte, cr *cv1.ResourceRequirements) (bool, error)
+
 func (s sumCmd) Parse(manifest []byte) (*cv1.ResourceRequirements, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(manifest))
 	scanner.Split(scanYamlSpecs)
@@ -20,35 +30,50 @@ func (s sumCmd) Parse(manifest []byte) (*cv1.ResourceRequirements, error) {
 
 	cr := cv1.ResourceRequirements{
 		Limits: cv1.ResourceList{
-			"cpu":    resource.MustParse("0"),
-			"memory": resource.MustParse("0"),
+			cv1.ResourceCPU:     resource.MustParse("0"),
+			cv1.ResourceMemory:  resource.MustParse("0"),
+			cv1.ResourceStorage: resource.MustParse("0"),
+
+			cv1.ResourceConfigMaps:             resource.MustParse("0"),
+			cv1.ResourceSecrets:                resource.MustParse("0"),
+			cv1.ResourcePersistentVolumeClaims: resource.MustParse("0"),
+			cv1.ResourceServices:               resource.MustParse("0"),
+
+			jobCpu:    resource.MustParse("0"),
+			jobMemory: resource.MustParse("0"),
 		},
 		Requests: cv1.ResourceList{
-			"cpu":    resource.MustParse("0"),
-			"memory": resource.MustParse("0"),
+			cv1.ResourceCPU:     resource.MustParse("0"),
+			cv1.ResourceMemory:  resource.MustParse("0"),
+			cv1.ResourceStorage: resource.MustParse("0"),
+
+			jobCpu:    resource.MustParse("0"),
+			jobMemory: resource.MustParse("0"),
 		},
+	}
+
+	parsers := []TypeParser{
+		s.parseCronJob,
+		s.parseDeployment,
+		s.parseStatefulset,
+
+		s.parseConfigmap,
+		s.parseSecret,
+		s.parsePvc,
+		s.parseService,
 	}
 
 	for scanner.Scan() {
 		content := scanner.Bytes()
-		if ok, err := s.parseDeployment(content, &cr); err != nil {
-			return nil, err
-		} else {
-			if ok {
-				continue
-			}
-		}
 
-		if ok, err := s.parseStatefulset(content, &cr); err != nil {
-			return nil, err
-		} else {
-			if ok {
-				continue
+		for _, p := range parsers {
+			if ok, err := p(content, &cr); err != nil {
+				return nil, err
+			} else {
+				if ok {
+					break
+				}
 			}
-		}
-
-		if _, err := s.parseCronJob(content, &cr); err != nil {
-			return nil, err
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -57,70 +82,45 @@ func (s sumCmd) Parse(manifest []byte) (*cv1.ResourceRequirements, error) {
 	return &cr, nil
 }
 
-func (s sumCmd) procResourceRequirements(pathid string, rr cv1.ResourceRequirements, tgt *cv1.ResourceRequirements, repl int32) error {
+func (s sumCmd) procRequirementSrc(resourceSrc cv1.ResourceName, resourceTgt cv1.ResourceName, pathid string, rr cv1.ResourceList, tgt cv1.ResourceList, repl int32, role string) error {
+	v := rr[resourceSrc]
 
-	{
-		v := rr.Limits.Cpu()
-		if v.IsZero() {
-			var err error
-			if v, err = s.defaultResource(pathid, cv1.ResourceCPU, s.getDefaultLimit(cv1.ResourceCPU), "limit"); err != nil {
-				return err
-			}
-		}
-
-		if t, ok := tgt.Limits[cv1.ResourceCPU]; ok {
-			v.Mul(int64(repl))
-			t.Add(*v)
-			tgt.Limits[cv1.ResourceCPU] = t
-		}
-	}
-	{
-		v := rr.Limits.Memory()
-		if v.IsZero() {
-			var err error
-			if v, err = s.defaultResource(pathid, cv1.ResourceMemory, s.getDefaultLimit(cv1.ResourceMemory), "limit"); err != nil {
-				return err
-			}
+	if v.IsZero() {
+		if vp, err := s.defaultResource(pathid, resourceSrc, s.getDefaultLimit(cv1.ResourceCPU), role); err != nil {
+			return err
+		} else {
+			v = *vp
 		}
 
-		if t, ok := tgt.Limits[cv1.ResourceMemory]; ok {
-			v.Mul(int64(repl))
-			t.Add(*v)
-			tgt.Limits[cv1.ResourceMemory] = t
-		}
 	}
-	{
-		v := rr.Requests.Cpu()
-		if v.IsZero() {
-			var err error
-			if v, err = s.defaultResource(pathid, cv1.ResourceCPU, s.getDefaultRequest(cv1.ResourceCPU), "request"); err != nil {
-				return err
-			}
-		}
-		if t, ok := tgt.Requests[cv1.ResourceCPU]; ok {
-			v.Mul(int64(repl))
-			t.Add(*v)
-			tgt.Requests[cv1.ResourceCPU] = t
-		}
-	}
-	{
-		v := rr.Requests.Memory()
-		if v.IsZero() {
-			var err error
-			if v, err = s.defaultResource(pathid, cv1.ResourceMemory, s.getDefaultRequest(cv1.ResourceMemory), "request"); err != nil {
-				return err
-			}
-		}
-		if t, ok := tgt.Requests[cv1.ResourceMemory]; ok {
-			v.Mul(int64(repl))
-			t.Add(*v)
-			tgt.Requests[cv1.ResourceMemory] = t
-		}
+
+	if t, ok := tgt[resourceTgt]; ok {
+		v.Mul(int64(repl))
+		t.Add(v)
+		tgt[resourceTgt] = t
 	}
 	return nil
 }
 
-var ZERO = resource.MustParse("0")
+func (s sumCmd) procRequirement(resource cv1.ResourceName, pathid string, rr cv1.ResourceList, tgt cv1.ResourceList, repl int32, role string) error {
+	return s.procRequirementSrc(resource, resource, pathid, rr, tgt, repl, role)
+}
+
+func (s sumCmd) procResourceRequirements(pathid string, rr cv1.ResourceRequirements, tgt *cv1.ResourceRequirements, repl int32) error {
+	if err := s.procRequirement(cv1.ResourceCPU, pathid, rr.Limits, tgt.Limits, repl, "limit"); err != nil {
+		return err
+	}
+	if err := s.procRequirement(cv1.ResourceMemory, pathid, rr.Limits, tgt.Limits, repl, "limit"); err != nil {
+		return err
+	}
+	if err := s.procRequirement(cv1.ResourceCPU, pathid, rr.Requests, tgt.Requests, repl, "request"); err != nil {
+		return err
+	}
+	if err := s.procRequirement(cv1.ResourceMemory, pathid, rr.Requests, tgt.Requests, repl, "request"); err != nil {
+		return err
+	}
+	return nil
+}
 
 func (s sumCmd) defaultResource(pathid string, typ cv1.ResourceName, val string, role string) (*resource.Quantity, error) {
 	if typ == "cpu" {
@@ -146,6 +146,71 @@ func (s sumCmd) defaultResource(pathid string, typ cv1.ResourceName, val string,
 			}
 		}
 	}
+}
+
+func (s sumCmd) parseService(content []byte, cr *cv1.ResourceRequirements) (bool, error) {
+	depl := cv1.Service{}
+
+	err := yaml.Unmarshal(content, &depl)
+	if err != nil {
+		return false, err
+	}
+	if depl.Kind == "Service" {
+		t := cr.Limits[cv1.ResourceServices]
+		t.Add(UNO)
+		cr.Limits[cv1.ResourceServices] = t
+		return true, nil
+	}
+	return false, nil
+}
+
+func (s sumCmd) parseConfigmap(content []byte, cr *cv1.ResourceRequirements) (bool, error) {
+	depl := cv1.ConfigMap{}
+
+	err := yaml.Unmarshal(content, &depl)
+	if err != nil {
+		return false, err
+	}
+	if depl.Kind == "ConfigMap" {
+		t := cr.Limits[cv1.ResourceConfigMaps]
+		t.Add(UNO)
+		cr.Limits[cv1.ResourceConfigMaps] = t
+		return true, nil
+	}
+	return false, nil
+}
+
+func (s sumCmd) parseSecret(content []byte, cr *cv1.ResourceRequirements) (bool, error) {
+	depl := cv1.Secret{}
+
+	err := yaml.Unmarshal(content, &depl)
+	if err != nil {
+		return false, err
+	}
+	if depl.Kind == "Secret" {
+		t := cr.Limits[cv1.ResourceSecrets]
+		t.Add(UNO)
+		cr.Limits[cv1.ResourceSecrets] = t
+		return true, nil
+	}
+	return false, nil
+}
+
+func (s sumCmd) parsePvc(content []byte, cr *cv1.ResourceRequirements) (bool, error) {
+	depl := cv1.PersistentVolumeClaim{}
+
+	err := yaml.Unmarshal(content, &depl)
+	if err != nil {
+		return false, err
+	}
+	if depl.Kind == "PersistentVolumeClaim" {
+		t := cr.Limits[cv1.ResourcePersistentVolumeClaims]
+		t.Add(UNO)
+		cr.Limits[cv1.ResourcePersistentVolumeClaims] = t
+
+		return true, nil
+	}
+	return false, nil
 }
 
 func (s sumCmd) parseDeployment(content []byte, cr *cv1.ResourceRequirements) (bool, error) {
@@ -207,7 +272,17 @@ func (s sumCmd) parseCronJob(content []byte, cr *cv1.ResourceRequirements) (bool
 	}
 	if depl.Kind == "CronJob" {
 		for _, c := range depl.Spec.JobTemplate.Spec.Template.Spec.Containers {
-			if err = s.procResourceRequirements(fmt.Sprintf("CronJob: %s, Container: %s", depl.Name, c.Name), c.Resources, cr, 1); err != nil {
+			pathid := fmt.Sprintf("CronJob: %s, Container: %s", depl.Name, c.Name)
+			if err := s.procRequirementSrc(cv1.ResourceCPU, jobCpu, pathid, c.Resources.Limits, cr.Limits, 1, "limit"); err != nil {
+				return false, err
+			}
+			if err := s.procRequirementSrc(cv1.ResourceMemory, jobMemory, pathid, c.Resources.Limits, cr.Limits, 1, "limit"); err != nil {
+				return false, err
+			}
+			if err := s.procRequirementSrc(cv1.ResourceCPU, jobCpu, pathid, c.Resources.Requests, cr.Requests, 1, "request"); err != nil {
+				return false, err
+			}
+			if err := s.procRequirementSrc(cv1.ResourceMemory, jobMemory, pathid, c.Resources.Requests, cr.Requests, 1, "request"); err != nil {
 				return false, err
 			}
 		}

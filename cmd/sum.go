@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -91,10 +92,37 @@ func (s sumCmd) run() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("CPU Request %v\n", req.Requests.Cpu())
-	fmt.Printf("Memory Request %v\n", req.Requests.Memory())
-	fmt.Printf("CPU Limit %v\n", req.Limits.Cpu())
-	fmt.Printf("Memory Limit %v\n", req.Limits.Memory())
+	FormatOutput(os.Stdout, req)
+	return nil
+}
+
+func FormatOutput(w io.Writer, req *cv1.ResourceRequirements) error {
+	jobCpuReq := req.Requests[jobCpu]
+	jobCpuLim := req.Limits[jobCpu]
+	jobMemReq := req.Requests[jobMemory]
+	jobMemLim := req.Limits[jobMemory]
+
+	sumCpuReq := req.Requests.Cpu().DeepCopy()
+	sumCpuReq.Add(jobCpuReq)
+	sumMemReq := req.Requests.Memory().DeepCopy()
+	sumMemReq.Add(jobMemReq)
+	sumCpuLim := req.Limits.Cpu().DeepCopy()
+	sumCpuLim.Add(jobCpuLim)
+	sumMemLim := req.Limits.Memory().DeepCopy()
+	sumMemLim.Add(jobMemLim)
+
+	if _, err := fmt.Fprintf(w, "CPU Limit %v + %v (Jobs) = %v\n", req.Limits.Cpu(), &jobCpuLim, &sumCpuLim); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(w, "Memory Limit %v + %v (Jobs) = %v\n", req.Limits.Memory(), &jobMemLim, &sumMemLim); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(w, "CPU Request %v + %v (Jobs) = %v\n", req.Requests.Cpu(), &jobCpuReq, &sumCpuReq); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(w, "Memory Request %v + %v (Jobs) = %v\n", req.Requests.Memory(), &jobMemReq, &sumMemReq); err != nil {
+		return err
+	}
 
 	return nil
 }
