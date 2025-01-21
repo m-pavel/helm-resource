@@ -17,6 +17,10 @@ builds:
       - linux
       - windows
       - darwin
+      - freebsd
+    goarch:
+      - amd64
+      - arm64
     ldflags:
       - -X github.com/m-pavel/helm-resource/cmd.Version={{ .Version }}
 
