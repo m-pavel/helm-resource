@@ -1,6 +1,6 @@
 # Helm resource plugin
 Calculates summary resource usage of the chart.
-# Installateion 
+# Installation 
 ```
     helm plugin install https://github.com/m-pavel/helm-resource
 ```
