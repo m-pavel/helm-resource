@@ -22,5 +22,5 @@ Takes in account replica count on each resource.
   - [ ] Volumes summary calculation
   - [ ] Reports generation
   - [X] Remote manifest support
-  - [ ] Validate require requirements fits quota
+  - [X] Validate require requirements fits quota
   

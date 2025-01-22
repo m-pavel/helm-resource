@@ -23,6 +23,21 @@ const (
 
 type TypeParser func(content []byte, cr *cv1.ResourceRequirements) (bool, error)
 
+func (b baseHelmCmd) GetRequirements() (*cv1.ResourceRequirements, error) {
+	var manifest []byte
+	var err error
+	if b.remote {
+		manifest, err = getRelease(b.chart, b.namespace)
+	} else {
+		manifest, err = getTemplate(b.chart, b.namespace, b.values, b.valueFiles)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return b.Parse(manifest)
+}
+
 func (b baseHelmCmd) Parse(manifest []byte) (*cv1.ResourceRequirements, error) {
 	scanner := bufio.NewScanner(bytes.NewReader(manifest))
 	scanner.Split(scanYamlSpecs)
@@ -140,7 +155,7 @@ func (b baseHelmCmd) defaultResource(pathid string, typ cv1.ResourceName, val st
 			return &v, err
 		} else {
 			if b.require {
-				return nil, fmt.Errorf("Memory %s  not defined in %s", role, pathid)
+				return nil, fmt.Errorf("Memory %s not defined in %s", role, pathid)
 			} else {
 				return &ZERO, nil
 			}

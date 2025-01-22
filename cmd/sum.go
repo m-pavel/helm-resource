@@ -16,11 +16,7 @@ type sumCmd struct {
 }
 
 func newSumCommand() *cobra.Command {
-	sum := sumCmd{
-		baseHelmCmd: baseHelmCmd{
-			namespace: os.Getenv("HELM_NAMESPACE"),
-		},
-	}
+	sum := sumCmd{}
 
 	cmd := &cobra.Command{
 		Use:   "sum",
@@ -44,22 +40,11 @@ func newSumCommand() *cobra.Command {
 }
 
 func (s sumCmd) run() error {
-	var manifest []byte
-	var err error
-	if s.remote {
-		manifest, err = getRelease(s.chart, s.namespace)
+	if req, err := s.GetRequirements(); err != nil {
+		return err
 	} else {
-		manifest, err = getTemplate(s.chart, s.namespace, s.values, s.valueFiles)
+		return s.FormatOutput(os.Stdout, req)
 	}
-
-	if err != nil {
-		return err
-	}
-	req, err := s.Parse(manifest)
-	if err != nil {
-		return err
-	}
-	return s.FormatOutput(os.Stdout, req)
 }
 
 func (s sumCmd) FormatOutput(w io.Writer, req *cv1.ResourceRequirements) error {

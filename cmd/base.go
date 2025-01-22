@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 	cv1 "k8s.io/api/core/v1"
 )
@@ -47,5 +49,6 @@ func (b *baseHelmCmd) propogateCmdFlags(cmd *cobra.Command) *cobra.Command {
 	f.StringVar(&b.defaultMemLimit, "default-mem-limit", "", "Default value for Memory limit")
 	f.StringVar(&b.defaultCpuReq, "default-cpu-req", "", "Default value for CPU request")
 	f.StringVar(&b.defaultMemReq, "default-mem-req", "", "Default value for Memory request")
+	f.StringVar(&b.namespace, "namespace", os.Getenv("HELM_NAMESPACE"), "Namespace")
 	return cmd
 }
