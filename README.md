@@ -31,14 +31,20 @@ Calculate chart resource requirements and check it fits k8s quota
 ```
 Example output
 ```
-+---------------+---------------+---------------+---------------+---------------+---------------+--------------+
-|               | Static wrkld  | Jobs          | Sum           | Quota         | Status ststic |Status sum    |
-+---------------+---------------+---------------+---------------+---------------+---------------+--------------+
-|CPU Limit      |         3600m |         1200m |         4800m |             8 |          true |         true |
-|Memory Limit   |       14972Mi |        4996Mi |       19968Mi |          20Gi |          true |         true |
-|CPU Request    |         2050m |          750m |         2800m |             8 |          true |         true |
-|Memory Request |       10580Mi |        2700Mi |       13280Mi |          20Gi |          true |         true |
-+---------------+---------------+---------------+---------------+---------------+---------------+--------------+
++----------------+---------------+---------------+---------------+---------------+---------------+--------------+
+|                | Static wrkld  | Jobs          | Sum           | Quota         | Status ststic |Status sum    |
++----------------+---------------+---------------+---------------+---------------+---------------+--------------+
+|CPU Limit       |         3600m |         1200m |         4800m |             8 |          true |         true |
+|Memory Limit    |       14972Mi |        4996Mi |       19968Mi |          20Gi |          true |         true |
+|CPU Request     |         2050m |          750m |         2800m |             8 |          true |         true |
+|Memory Request  |       10580Mi |        2700Mi |       13280Mi |          20Gi |          true |         true |
+|Storage Request |          18Gi |             0 |          18Gi |          50Gi |          true |         true |
++----------------+---------------+---------------+---------------+---------------+---------------+--------------+
+|     configmaps |               |               |             1 |           100 |               |         true |
+|        secrets |               |               |             1 |           100 |               |         true |
+|       services |               |               |            14 |           100 |               |         true |
+|persistentvolum |               |               |             6 |            10 |               |         true |
++----------------+---------------+---------------+---------------+---------------+---------------+--------------+
 ```
 # TODO
   - [X] Defaults support (as paramaeter as well as validation)
