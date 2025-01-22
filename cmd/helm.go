@@ -8,6 +8,8 @@ import (
 	"os/exec"
 )
 
+var yamlSeparator = []byte("\n---\n")
+
 func getTemplate(template, namespace string, variables []string, values []string) ([]byte, error) {
 	args := []string{"template", template}
 	if namespace != "" {
@@ -41,8 +43,6 @@ func outputWithRichError(cmd *exec.Cmd) ([]byte, error) {
 	}
 	return output, err
 }
-
-var yamlSeparator = []byte("\n---\n")
 
 func scanYamlSpecs(data []byte, atEOF bool) (int, []byte, error) {
 	if atEOF && len(data) == 0 {

@@ -108,7 +108,9 @@ func TestParseDefaults_Deployment(t *testing.T) {
 	dbytes, err := yaml.Marshal(depl)
 	require.NoError(t, err)
 	s := sumCmd{
-		require: true,
+		baseHelmCmd: baseHelmCmd{
+			require: true,
+		},
 	}
 	_, err = s.Parse(dbytes)
 	require.Error(t, err)
@@ -139,11 +141,13 @@ func TestParseDefaults2_Deployment(t *testing.T) {
 	dbytes, err := yaml.Marshal(depl)
 	require.NoError(t, err)
 	s := sumCmd{
-		require:         true,
-		defaultCpuLimit: "1",
-		defaultMemLimit: "1Gi",
-		defaultCpuReq:   "2",
-		defaultMemReq:   "2Gi",
+		baseHelmCmd: baseHelmCmd{
+			require:         true,
+			defaultCpuLimit: "1",
+			defaultMemLimit: "1Gi",
+			defaultCpuReq:   "2",
+			defaultMemReq:   "2Gi",
+		},
 	}
 	cr, err := s.Parse(dbytes)
 	require.NoError(t, err)

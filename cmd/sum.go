@@ -11,38 +11,15 @@ import (
 )
 
 type sumCmd struct {
-	namespace string
-
-	chart      string
-	values     []string
-	valueFiles []string
-
-	remote  bool
-	require bool
-
-	defaultCpuLimit string
-	defaultMemLimit string
-	defaultCpuReq   string
-	defaultMemReq   string
-}
-
-func (s sumCmd) getDefaultLimit(k cv1.ResourceName) string {
-	if k == "cpu" {
-		return s.defaultCpuLimit
-	}
-	return s.defaultMemLimit
-}
-
-func (s sumCmd) getDefaultRequest(k cv1.ResourceName) string {
-	if k == "cpu" {
-		return s.defaultCpuReq
-	}
-	return s.defaultMemReq
+	baseHelmCmd
+	output string
 }
 
 func newSumCommand() *cobra.Command {
 	sum := sumCmd{
-		namespace: os.Getenv("HELM_NAMESPACE"),
+		baseHelmCmd: baseHelmCmd{
+			namespace: os.Getenv("HELM_NAMESPACE"),
+		},
 	}
 
 	cmd := &cobra.Command{
@@ -60,19 +37,9 @@ func newSumCommand() *cobra.Command {
 			return sum.run()
 		},
 	}
-
+	sum.propogateCmdFlags(cmd)
 	f := cmd.Flags()
-	f.StringArrayVar(&sum.values, "set", []string{}, "set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
-	f.StringArrayVarP(&sum.valueFiles, "values", "f", []string{}, "specify values in a YAML file (can specify multiple)")
-
-	f.BoolVar(&sum.remote, "remote", false, "Calculate for remote release instand of local chart")
-	f.BoolVar(&sum.require, "require", false, "Require CPU and Memory values to be defined for each container.")
-
-	f.StringVar(&sum.defaultCpuLimit, "default-cpu-limit", "", "Default value for CPU limit")
-	f.StringVar(&sum.defaultMemLimit, "default-mem-limit", "", "Default value for Memory limit")
-	f.StringVar(&sum.defaultCpuReq, "default-cpu-req", "", "Default value for CPU request")
-	f.StringVar(&sum.defaultMemReq, "default-mem-req", "", "Default value for Memory request")
-
+	f.StringVar(&sum.output, "output", "", "Output format")
 	return cmd
 }
 
@@ -92,11 +59,10 @@ func (s sumCmd) run() error {
 	if err != nil {
 		return err
 	}
-	FormatOutput(os.Stdout, req)
-	return nil
+	return s.FormatOutput(os.Stdout, req)
 }
 
-func FormatOutput(w io.Writer, req *cv1.ResourceRequirements) error {
+func (s sumCmd) FormatOutput(w io.Writer, req *cv1.ResourceRequirements) error {
 	jobCpuReq := req.Requests[jobCpu]
 	jobCpuLim := req.Limits[jobCpu]
 	jobMemReq := req.Requests[jobMemory]
@@ -111,17 +77,52 @@ func FormatOutput(w io.Writer, req *cv1.ResourceRequirements) error {
 	sumMemLim := req.Limits.Memory().DeepCopy()
 	sumMemLim.Add(jobMemLim)
 
-	if _, err := fmt.Fprintf(w, "CPU Limit %v + %v (Jobs) = %v\n", req.Limits.Cpu(), &jobCpuLim, &sumCpuLim); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintf(w, "Memory Limit %v + %v (Jobs) = %v\n", req.Limits.Memory(), &jobMemLim, &sumMemLim); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintf(w, "CPU Request %v + %v (Jobs) = %v\n", req.Requests.Cpu(), &jobCpuReq, &sumCpuReq); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintf(w, "Memory Request %v + %v (Jobs) = %v\n", req.Requests.Memory(), &jobMemReq, &sumMemReq); err != nil {
-		return err
+	switch s.output {
+	case "table":
+		line := func() error {
+			if _, err := fmt.Fprint(w, "+---------------+---------------+---------------+---------------+\n"); err != nil {
+				return err
+			}
+			return nil
+		}
+		if err := line(); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprint(w, "|               | Static wrkld  | Jobs          | Sum           |\n"); err != nil {
+			return err
+		}
+		if err := line(); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(w, "|CPU Limit      | %13v | %13v | %13v |\n", req.Limits.Cpu(), &jobCpuLim, &sumCpuLim); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(w, "|Memory Limit   | %13v | %13v | %13v |\n", req.Limits.Memory(), &jobMemLim, &sumMemLim); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(w, "|CPU Request    | %13v | %13v | %13v |\n", req.Requests.Cpu(), &jobCpuReq, &sumCpuReq); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(w, "|Memory Request | %13v | %13v | %13v |\n", req.Requests.Memory(), &jobMemReq, &sumMemReq); err != nil {
+			return err
+		}
+		if err := line(); err != nil {
+			return err
+		}
+	default:
+		if _, err := fmt.Fprintf(w, "CPU Limit %v + %v (Jobs) = %v\n", req.Limits.Cpu(), &jobCpuLim, &sumCpuLim); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(w, "Memory Limit %v + %v (Jobs) = %v\n", req.Limits.Memory(), &jobMemLim, &sumMemLim); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(w, "CPU Request %v + %v (Jobs) = %v\n", req.Requests.Cpu(), &jobCpuReq, &sumCpuReq); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(w, "Memory Request %v + %v (Jobs) = %v\n", req.Requests.Memory(), &jobMemReq, &sumMemReq); err != nil {
+			return err
+		}
+
 	}
 
 	return nil

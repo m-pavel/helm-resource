@@ -6,9 +6,9 @@ import (
 
 const rootCmdLongUsage = `resource`
 
-// New creates a new cobra client
 func New() *cobra.Command {
 	sumCommand := newSumCommand()
+	checkCommand := newCheckCommand()
 
 	cmd := &cobra.Command{
 		Use:   "resource",
@@ -19,7 +19,8 @@ func New() *cobra.Command {
 
 	// add flagset from chartCommand
 	cmd.Flags().AddFlagSet(sumCommand.Flags())
-	cmd.AddCommand(versionCmd(), sumCommand)
-	cmd.SetHelpCommand(&cobra.Command{}) // Disable the help command
+	cmd.Flags().AddFlagSet(checkCommand.Flags())
+	cmd.AddCommand(versionCmd(), sumCommand, checkCommand)
+	cmd.SetHelpCommand(&cobra.Command{})
 	return cmd
 }
