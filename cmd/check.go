@@ -49,11 +49,15 @@ func (c checkCmd) run() error {
 	jobCpuLim := req.Limits[jobCpu]
 	jobMemReq := req.Requests[jobMemory]
 	jobMemLim := req.Limits[jobMemory]
+	jobStrReq := req.Requests[jobStorage]
 
 	sumCpuReq := req.Requests.Cpu().DeepCopy()
 	sumCpuReq.Add(jobCpuReq)
 	sumMemReq := req.Requests.Memory().DeepCopy()
 	sumMemReq.Add(jobMemReq)
+	sumStrReq := req.Requests.Storage().DeepCopy()
+	sumStrReq.Add(jobStrReq)
+
 	sumCpuLim := req.Limits.Cpu().DeepCopy()
 	sumCpuLim.Add(jobCpuLim)
 	sumMemLim := req.Limits.Memory().DeepCopy()
@@ -75,10 +79,14 @@ func (c checkCmd) run() error {
 	memReqOk := req.Requests.Memory().Cmp(qMemReq) < 0
 	memSumReqOk := sumMemReq.Cmp(qMemReq) < 0
 
+	qStrReq := q.Status.Hard[cv1.ResourceRequestsStorage]
+	strReqOk := req.Requests.Storage().Cmp(qStrReq) < 0
+	strSumReqOk := sumStrReq.Cmp(qStrReq) < 0
+
 	w := os.Stdout
 
 	line := func() error {
-		if _, err := fmt.Fprint(w, "+---------------+---------------+---------------+---------------+---------------+---------------+--------------+\n"); err != nil {
+		if _, err := fmt.Fprint(w, "+----------------+---------------+---------------+---------------+---------------+---------------+--------------+\n"); err != nil {
 			return err
 		}
 		return nil
@@ -86,24 +94,43 @@ func (c checkCmd) run() error {
 	if err := line(); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprint(w, "|               | Static wrkld  | Jobs          | Sum           | Quota         | Status ststic |Status sum    |\n"); err != nil {
+	if _, err := fmt.Fprint(w, "|                | Static wrkld  | Jobs          | Sum           | Quota         | Status ststic |Status sum    |\n"); err != nil {
 		return err
 	}
 	if err := line(); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(w, "|CPU Limit      | %13v | %13v | %13v | %13v | %13t |%13t |\n", req.Limits.Cpu(), &jobCpuLim, &sumCpuLim, &qCpuLim, cpuLimOk, cpuSumLimOk); err != nil {
+	if _, err := fmt.Fprintf(w, "|CPU Limit       | %13v | %13v | %13v | %13v | %13t |%13t |\n", req.Limits.Cpu(), &jobCpuLim, &sumCpuLim, &qCpuLim, cpuLimOk, cpuSumLimOk); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(w, "|Memory Limit   | %13v | %13v | %13v | %13v | %13t |%13t |\n", req.Limits.Memory(), &jobMemLim, &sumMemLim, &qMemLim, memLimOk, memSumLimOk); err != nil {
+	if _, err := fmt.Fprintf(w, "|Memory Limit    | %13v | %13v | %13v | %13v | %13t |%13t |\n", req.Limits.Memory(), &jobMemLim, &sumMemLim, &qMemLim, memLimOk, memSumLimOk); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(w, "|CPU Request    | %13v | %13v | %13v | %13v | %13t |%13t |\n", req.Requests.Cpu(), &jobCpuReq, &sumCpuReq, &qCpuReq, cpuReqOk, cpuSumReqOk); err != nil {
+	if _, err := fmt.Fprintf(w, "|CPU Request     | %13v | %13v | %13v | %13v | %13t |%13t |\n", req.Requests.Cpu(), &jobCpuReq, &sumCpuReq, &qCpuReq, cpuReqOk, cpuSumReqOk); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(w, "|Memory Request | %13v | %13v | %13v | %13v | %13t |%13t |\n", req.Requests.Memory(), &jobMemReq, &sumMemReq, &qMemReq, memReqOk, memSumReqOk); err != nil {
+	if _, err := fmt.Fprintf(w, "|Memory Request  | %13v | %13v | %13v | %13v | %13t |%13t |\n", req.Requests.Memory(), &jobMemReq, &sumMemReq, &qMemReq, memReqOk, memSumReqOk); err != nil {
 		return err
 	}
+	if _, err := fmt.Fprintf(w, "|Storage Request | %13v | %13v | %13v | %13v | %13t |%13t |\n", req.Requests.Storage(), &jobStrReq, &sumStrReq, &qStrReq, strReqOk, strSumReqOk); err != nil {
+		return err
+	}
+	if err := line(); err != nil {
+		return err
+	}
+	loglimit := func(r cv1.ResourceName) error {
+		cmc := req.Limits[r]
+		cmq := q.Status.Hard[r]
+		cmok := cmc.Cmp(cmq) < 0
+		if _, err := fmt.Fprintf(w, "|%15.15s |               |               | %13v | %13v |               |%13t |\n", r, &cmc, &cmq, cmok); err != nil {
+			return err
+		}
+		return nil
+	}
+	loglimit(cv1.ResourceConfigMaps)
+	loglimit(cv1.ResourceSecrets)
+	loglimit(cv1.ResourceServices)
+	loglimit(cv1.ResourcePersistentVolumeClaims)
 	if err := line(); err != nil {
 		return err
 	}

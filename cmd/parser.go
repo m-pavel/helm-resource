@@ -17,8 +17,9 @@ var ZERO = resource.MustParse("0")
 var UNO = resource.MustParse("1")
 
 const (
-	jobCpu    = "x-job-cpu"
-	jobMemory = "x-job-memory"
+	jobCpu     = "x-job-cpu"
+	jobMemory  = "x-job-memory"
+	jobStorage = "x-job-storage"
 )
 
 type TypeParser func(content []byte, cr *cv1.ResourceRequirements) (bool, error)
@@ -62,8 +63,9 @@ func (b baseHelmCmd) Parse(manifest []byte) (*cv1.ResourceRequirements, error) {
 			cv1.ResourceMemory:  resource.MustParse("0"),
 			cv1.ResourceStorage: resource.MustParse("0"),
 
-			jobCpu:    resource.MustParse("0"),
-			jobMemory: resource.MustParse("0"),
+			jobCpu:     resource.MustParse("0"),
+			jobMemory:  resource.MustParse("0"),
+			jobStorage: resource.MustParse("0"),
 		},
 	}
 
