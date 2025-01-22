@@ -72,10 +72,10 @@ func TestParse_Job(t *testing.T) {
 	s := sumCmd{}
 	cr, err := s.Parse(date)
 	require.NoError(t, err)
-	assert.True(t, cr.Limits.Cpu().Equal(resource.MustParse("400m")), cr.Limits.Cpu())
-	assert.True(t, cr.Limits.Memory().Equal(resource.MustParse("2048Mi")), cr.Limits.Memory())
-	assert.True(t, cr.Requests.Cpu().Equal(resource.MustParse("250m")), cr.Requests.Cpu())
-	assert.True(t, cr.Requests.Memory().Equal(resource.MustParse("900Mi")), cr.Requests.Memory())
+	assert.True(t, cr.Limits[jobCpu].Equal(resource.MustParse("400m")), cr.Limits.Cpu())
+	assert.True(t, cr.Limits[jobMemory].Equal(resource.MustParse("2048Mi")), cr.Limits.Memory())
+	assert.True(t, cr.Requests[jobCpu].Equal(resource.MustParse("250m")), cr.Requests.Cpu())
+	assert.True(t, cr.Requests[jobMemory].Equal(resource.MustParse("900Mi")), cr.Requests.Memory())
 }
 
 func TestParseDefaults_Deployment(t *testing.T) {
