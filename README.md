@@ -42,7 +42,7 @@ Example output
 ```
 # TODO
   - [X] Defaults support (as paramaeter as well as validation)
-  - [ ] Volumes summary calculation
+  - [X] Volumes summary calculation
   - [ ] Reports generation
   - [X] Remote manifest support
   - [X] Validate require requirements fits quota
