@@ -90,7 +90,7 @@ func TestParseDefaults_Deployment(t *testing.T) {
 			Template: cv1.PodTemplateSpec{
 				Spec: cv1.PodSpec{
 					Containers: []cv1.Container{
-						cv1.Container{
+						{
 							Name: "test-container",
 							Resources: cv1.ResourceRequirements{
 								Limits: cv1.ResourceList{
@@ -128,7 +128,7 @@ func TestParseDefaults2_Deployment(t *testing.T) {
 			Template: cv1.PodTemplateSpec{
 				Spec: cv1.PodSpec{
 					Containers: []cv1.Container{
-						cv1.Container{
+						{
 							Name:      "test-container",
 							Resources: cv1.ResourceRequirements{},
 						},
