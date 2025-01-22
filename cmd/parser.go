@@ -224,7 +224,9 @@ func (b baseHelmCmd) parsePvc(content []byte, cr *cv1.ResourceRequirements) (boo
 		t := cr.Limits[cv1.ResourcePersistentVolumeClaims]
 		t.Add(UNO)
 		cr.Limits[cv1.ResourcePersistentVolumeClaims] = t
-
+		if err := b.procRequirement(cv1.ResourceStorage, fmt.Sprintf("PVC: %s", depl.Name), depl.Spec.Resources.Requests, cr.Requests, 1, "request"); err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 	return false, nil
